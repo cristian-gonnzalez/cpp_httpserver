@@ -20,18 +20,18 @@ Server::Server(int port)
 {  
     if( (m_socket = socket(AF_INET, SOCK_STREAM, 0)) < 0)
     {
-        throw new ServerExeption( "Error in socket: ",  errno);
+        throw ServerExeption( "Error in socket");
     }
  
     int on = 1;   // no funciona
   	if (setsockopt(m_socket, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) < 0)
     {
-        throw new ServerExeption( "Error in setsockopt: ",  errno);
+        throw ServerExeption( "Error in setsockopt");
     }
 
     if (pipe(m_awakening_pipe) < 0) 
     { 
-        throw new ServerExeption( "Error in pipe: ",  errno);
+        throw ServerExeption( "Error in pipe");
     } 	
 }
 
@@ -48,24 +48,26 @@ Server::~Server()
 
 void handle_session( std::unique_ptr<Session> s )
 {  
-  // TODO: habdle session here 
-  using namespace std::chrono_literals;
+  std::cout << "Session " << std::this_thread::get_id() << "\n";
 
-  std::thread::id this_id = std::this_thread::get_id();
- 
-  std::cout << "worker " << this_id << "\n";
+  std::string str_in = s->read(0);
+  std::cout << "mesasge in: \n\n" << str_in << "\n\n";
 
-  std::string msg = s->read(0);
-  std::cout << msg << "\n";
+  try
+  {
+      ProtocolHandler prot_handler;
 
-  std::cout << this_id << ": waiting 5 sec\n";
-
-  std::this_thread::sleep_for(5000ms);
-
-  s->write("hello client");
-  
-  std::cout << this_id << ": sent message\n";
+      http::Response resp = prot_handler.handle( str_in );
+      std::string str_out = resp.to_str();
+      std::cout << "message out: \n\n" <<  str_out << "\n\n";
+      s->write( str_out );
+  }
+  catch(const std::exception& e)
+  {
+    std::cerr << e.what() << '\n';
+  }
 }
+
 
 void Server::run()
 {
@@ -80,7 +82,7 @@ void Server::run()
     int r = poll(0); 
     if( r < 0)
     {
-      throw new ServerExeption( "Error in poll: ",  errno);
+      throw ServerExeption( "Error in poll");
     }
     // 1 means a new connection was made. other value could an awakeking event or timeout
     if( r == 1 ) 
@@ -122,7 +124,7 @@ void Server::bind()
 
   if( (::bind(m_socket, (struct sockaddr *)&addr_in, sizeof(addr_in))) < 0)
   { 
-    throw new ServerExeption( "Error in bind: ",  errno);
+    throw new ServerExeption( "Error in bind");
   }
 }
 
@@ -168,7 +170,7 @@ std::unique_ptr<Session> Server::accept(int timeout /*= 0*/)
 	int session_id;
 	if( (session_id = ::accept(m_socket, (struct sockaddr *)&addr_in, &addr_len)) == -1)
 	{
-	  throw new ServerExeption( "Error in accept: ",  errno);
+	  throw new ServerExeption( "Error in accept");
 	}
 	
 	std::string host(inet_ntoa(addr_in.sin_addr));

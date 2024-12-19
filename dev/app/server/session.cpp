@@ -51,7 +51,7 @@ std::string Session::read(int timeout/*=0*/)
     int nbytes = ::read(m_socket, temp, size);
     if (nbytes <= 0 )
     {
-      throw new SessionException("error in read: ", errno);
+      throw new SessionException("error in read");
     }
     resp.append( temp );
   }
@@ -67,7 +67,7 @@ int Session::write(std::string msg)
     int r = ::send(m_socket, msg.c_str(), msg.size(), 0);
     if (r < 0)
     {
-      throw new SessionException("error in send: ", errno);
+      throw new SessionException("error in send");
     }
   }
 

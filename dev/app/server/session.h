@@ -2,6 +2,7 @@
 
 #include <string>
 #include <string.h>
+#include "exception.h"
 
 class Session
 {
@@ -20,20 +21,13 @@ class Session
 };
 
 
-class SessionException : public std::exception
+class SessionException : public server::Exception
 {
-    private:
-      std::string m_msg;
-      int  m_errno;
-
     public:
-        SessionException(std::string msg, int _errno)
-        : m_errno(_errno)
+        SessionException(std::string msg)
+        : server::Exception(msg)
         {
-          m_msg = msg;
-          m_msg.append(" ");
-          m_msg.append(strerror(_errno));
         }
-
-        const char* what() const throw() { return m_msg.c_str(); }    
 };
+
+

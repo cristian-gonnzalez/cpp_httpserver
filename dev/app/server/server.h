@@ -3,6 +3,8 @@
 #include <string>
 #include <memory>
 #include "session.h"
+#include "protocol_handler.h"
+#include "exception.h"
 
 
 class Server
@@ -27,20 +29,11 @@ class Server
 };
 
 
-class ServerExeption : public std::exception
+class ServerExeption : public server::Exception
 {
-    private:
-        std::string m_msg;
-        int  m_errno;
-
     public:
-        ServerExeption(std::string msg, int _errno)
-        : m_errno(_errno)
+        ServerExeption(std::string msg)
+        : server::Exception(msg)
         {
-          m_msg = msg;
-          m_msg.append(" ");
-          m_msg.append(strerror(_errno));
         }
-
-        const char* what() const throw() { return m_msg.c_str(); }    
 };
