@@ -11,6 +11,9 @@ namespace http::protocols {
     {
         protected:
             // Construnctor is protected because this class is used only as interface
+            // NOTE: as one of the method is a pure virtual funtion, this class is abstract (interface) so 
+            // this means no object can instanciate from this constructor. Anyway, I added this
+            // to make clear that I dont want anyone to use this class directly
             Protocol();
 
         public:
