@@ -9,7 +9,7 @@ ProtocolHandler::ProtocolHandler()
 
 ProtocolHandler::~ProtocolHandler()
 {
-    for( auto p:protocols)
+    for( auto& p:protocols)
     {
         delete p;
     }
@@ -18,7 +18,7 @@ ProtocolHandler::~ProtocolHandler()
 http::Response ProtocolHandler::handle( std::string in )
 {
     http::Response resp;
-    for( auto p:protocols)
+    for( auto& p:protocols)
     {
         try
         {
