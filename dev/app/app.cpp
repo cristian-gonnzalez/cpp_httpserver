@@ -26,7 +26,7 @@ void run_server( std::shared_ptr<Server> serv )
 
 void log_init()
 {
-    std::shared_ptr<app::log::Logger> console_logger = std::make_shared<app::log::CLogger>();
+    std::shared_ptr<app::log::Logger> console_logger{ std::make_shared<app::log::CLogger>() };
     console_logger->set_level( app::log::LogLevel::error );
     
     app::log::LogDirector& log_director = app::log::LogDirector::get();
