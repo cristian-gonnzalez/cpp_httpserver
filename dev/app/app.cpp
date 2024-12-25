@@ -5,28 +5,43 @@
 #include <mutex>
 #include "server.h"
 #include "session.h"
+#include "logger.h"
+#include "console_logger.h"
+#include "log_director.h"
 
 std::mutex gbl_mutex;
 
 void signal_handler(int signal_num) 
 { 
-     gbl_mutex.unlock();
-    std::cout << "Signal " << signal_num << " recived\n";
+    gbl_mutex.unlock();
+    DEBUG( "Signal "+ std::to_string(signal_num) + " recived\n" );
 } 
 
 void run_server( std::shared_ptr<Server> serv )
 {
-    std::cout << "Running server\n";
+    LOG( "Running server" );
     serv->run();
-    std::cout << "Stopping server\n";    
+    LOG( "Stoping server" );   
 }
+
+void log_init()
+{
+    std::shared_ptr<app::log::Logger> console_logger = std::make_shared<app::log::CLogger>();
+    console_logger->set_level( app::log::LogLevel::error );
+    
+    app::log::LogDirector& log_director = app::log::LogDirector::get();
+    log_director.add( console_logger );
+}
+ 
 
 int main()
 {
-    signal(SIGINT, signal_handler); 
+    signal(SIGINT, signal_handler);
 
-    int port = 8080;
-    auto serv_ptr = std::make_shared<Server>(port);
+    log_init();
+
+    int port{ 8080 };
+    auto serv_ptr{ std::make_shared<Server>(port) };
 
     try
     {
@@ -36,16 +51,20 @@ int main()
         // In this way, we dont need a loop and do not consume 
         gbl_mutex.lock();
         gbl_mutex.lock();
-        std::cout << "Stop server\n";
+        DEBUG( "Stop server" );
         serv_ptr->stop();
     }
     catch(const ServerExeption& e)
     {
-        std::cerr << e.what() << '\n';
+        ERROR( e.what() );
     }
     catch(const SessionException& e2)
     {
-        std::cerr << e2.what() << '\n';
+        ERROR( e2.what() );
+    }
+    catch(const std::exception& e3)
+    {
+        ERROR( e3.what() );
     }
 
     return 0;

@@ -1,23 +1,25 @@
 #include "request.h"
 #include <sstream>
+#include "log_director.h"
 
 using namespace http;
 
 
 Request::Request( std::string method, std::string target, std::string http_version, std::string body)
-: Message( http_version, body ), m_method(method), m_target(target)
+: Message{ http_version, body }, m_method{method}, m_target{target}
 {
+  INFO("Calling Request( args )");
 }
 
 Request::~Request()
 {
+  INFO("Calling ~Request");
 }
-
 
 std::string Request::to_str()
 {
     std::string r;
-    std::stringstream ss;
+    std::stringstream ss{};
 
     ss << m_method << " "
        << m_target << " "

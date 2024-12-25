@@ -4,15 +4,17 @@
 #include <unistd.h>
 #include <sys/socket.h>
 #include <poll.h>
+#include "log_director.h"
 
 Session::Session(int socket, std::string host)
-: m_socket(socket), m_host(host)
+: m_socket{socket}, m_host{host}
 {
+  INFO("Calling Session");
 }
 
 Session::~Session()
 {
-  std::cout << "Calliing ~Session" << std::endl;
+  INFO("Calling ~Session");
   close(m_socket);
 }
 
@@ -21,7 +23,7 @@ int Session::poll( short events, int msecs_timeout )
 {
   struct pollfd pfd = { .fd = m_socket, .events = events, .revents = 0};
   
-  int ret = ::poll( &pfd, 1, msecs_timeout );
+  int ret{ ::poll( &pfd, 1, msecs_timeout ) };
   if( ret > 0 )
   {
     if( ( pfd.revents & events ) != 0 )
@@ -41,14 +43,14 @@ int Session::poll( short events, int msecs_timeout )
 std::string Session::read(int timeout/*=0*/)
 {
   std::string resp;
-  int size = 1024;
+  int size{1024};
   char temp[size];
 
-  int r = poll(POLLIN, timeout);
+  int r{ poll(POLLIN, timeout) };
   if( r > 0)
   {
     memset(temp, 0, size);
-    int nbytes = ::read(m_socket, temp, size);
+    ssize_t nbytes{ ::read(m_socket, temp, size) };
     if (nbytes <= 0 )
     {
       throw new SessionException("error in read");
@@ -61,10 +63,10 @@ std::string Session::read(int timeout/*=0*/)
 
 int Session::write(std::string msg)
 {
-  int r = poll(POLLOUT, 0);
+  int r{ poll(POLLOUT, 0) };
   if( r > 0)
   {
-    int r = ::send(m_socket, msg.c_str(), msg.size(), 0);
+    r = ::send(m_socket, msg.c_str(), msg.size(), 0);
     if (r < 0)
     {
       throw new SessionException("error in send");

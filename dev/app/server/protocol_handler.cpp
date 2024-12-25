@@ -17,7 +17,7 @@ ProtocolHandler::~ProtocolHandler()
 
 http::Response ProtocolHandler::handle( std::string in )
 {
-    http::Response resp;
+    http::Response resp{};
     for( auto& p:protocols)
     {
         try

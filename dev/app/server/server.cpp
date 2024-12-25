@@ -13,17 +13,19 @@
 #include <poll.h>
 
 #include <syncstream>
+#include "log_director.h"
 
 
 Server::Server(int port)
-: m_port(port), m_running(false)
+: m_port{port}, m_running{false}
 {  
-    if( (m_socket = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+    INFO("Calling constructor Server( args )");
+    if( (m_socket = socket(AF_INET, SOCK_STREAM, 0) ) < 0)
     {
         throw ServerExeption( "Error in socket");
     }
  
-    int on = 1;   // no funciona
+    int on{ 1 };   // no funciona
   	if (setsockopt(m_socket, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) < 0)
     {
         throw ServerExeption( "Error in setsockopt");
@@ -37,7 +39,7 @@ Server::Server(int port)
 
 Server::~Server()
 {
-  std::cout << "Calling ~Server\n";
+  INFO("Calling ~Server");
   // RAII: we must close all resources adquired in the constructor
   stop();
   close(m_socket);
@@ -48,23 +50,27 @@ Server::~Server()
 
 void handle_session( std::unique_ptr<Session> s )
 {  
-  std::cout << "Session " << std::this_thread::get_id() << "\n";
+  std::stringstream ss;
+  ss << std::this_thread::get_id();
+  uint64_t id = std::stoull(ss.str());
 
-  std::string str_in = s->read(0);
-  std::cout << "mesasge in: \n\n" << str_in << "\n\n";
+  LOG( "Session " + std::to_string( id ) );
 
+  std::string str_in{ s->read(0) };
+  DEBUG("mesasge in: \n\n" + str_in + "\n" );
+ 
   try
   {
-      ProtocolHandler prot_handler;
+      ProtocolHandler prot_handler{};
 
       http::Response resp = prot_handler.handle( str_in );
       std::string str_out = resp.to_str();
-      std::cout << "message out: \n\n" <<  str_out << "\n\n";
+      DEBUG("mesasge out: \n\n" + str_out + "\n" );
       s->write( str_out );
   }
   catch(const std::exception& e)
   {
-    std::cerr << e.what() << '\n';
+    ERROR( e.what() );
   }
 }
 
@@ -79,7 +85,7 @@ void Server::run()
   m_running = true;
   while(m_running) 
   {
-    int r = poll(0); 
+    int r{ poll(0) }; 
     if( r < 0)
     {
       throw ServerExeption( "Error in poll");
@@ -120,7 +126,7 @@ struct sockaddr_in Server::build_addr_in()
 
 void Server::bind()
 {  
-  struct sockaddr_in addr_in = build_addr_in();
+  struct sockaddr_in addr_in{ build_addr_in() };
 
   if( (::bind(m_socket, (struct sockaddr *)&addr_in, sizeof(addr_in))) < 0)
   { 
@@ -136,9 +142,9 @@ int Server::poll( int msecs_timeout )
     { .fd = m_awakening_pipe[0], .events = POLLIN, .revents = 0}
   };
 
-  size_t n = ( sizeof( pfds ) / sizeof( ( pfds )[0] ) );
+  size_t n{ ( sizeof( pfds ) / sizeof( ( pfds )[0] ) ) };
 
-  int ret = ::poll( pfds, n, msecs_timeout );
+  int ret{ ::poll( pfds, n, msecs_timeout ) };
   if( ret > 0 )
   {
     if( ( pfds[0].revents & POLLIN ) != 0 )
@@ -148,7 +154,7 @@ int Server::poll( int msecs_timeout )
     {
       /* consume all awakening events */
       char buf[50];
-      ssize_t bytes_count = ::read( m_awakening_pipe[0], buf, sizeof( buf ) );
+      ssize_t bytes_count{ ::read( m_awakening_pipe[0], buf, sizeof( buf ) ) };
       return 2;
     }
   }
@@ -165,7 +171,7 @@ int Server::poll( int msecs_timeout )
 std::unique_ptr<Session> Server::accept(int timeout /*= 0*/)
 {
   struct sockaddr_in addr_in;
-	socklen_t addr_len = sizeof(addr_in);
+	socklen_t addr_len { sizeof(addr_in) };
 
 	int session_id;
 	if( (session_id = ::accept(m_socket, (struct sockaddr *)&addr_in, &addr_len)) == -1)
@@ -173,7 +179,7 @@ std::unique_ptr<Session> Server::accept(int timeout /*= 0*/)
 	  throw new ServerExeption( "Error in accept");
 	}
 	
-	std::string host(inet_ntoa(addr_in.sin_addr));
+	std::string host{ inet_ntoa(addr_in.sin_addr) };
 	return std::make_unique<Session>(session_id, host);
 }
 

@@ -1,6 +1,7 @@
 #include "rest.h"
 #include <iostream>
 #include <sstream>
+#include "log_director.h"
 
 using namespace http::protocols;
 
@@ -42,17 +43,17 @@ http::Request Rest::request_load( std::string &str )
 
     body = str.substr( found );
     
-    return http::Request(method, target, version, body);
+    return http::Request{method, target, version, body};
 }
 
 
 http::Response Rest::handle( std::string in )
 {
-    std::cout << "Handling message with Rest\n";
+    DEBUG( "Handling message with Rest" );
 
     try
     {
-        Request req = request_load(in);
+        Request req{ request_load(in) };
         // TODO: handle request here
     }
     catch(const std::exception& e)
@@ -61,8 +62,8 @@ http::Response Rest::handle( std::string in )
         throw e;
     }
     
-    Response r("HTTP/1.1", "{}");
-    
-    std::cout << "Rest could handle the message\n";
+    Response r{ "HTTP/1.1", "{}" };
+ 
+    DEBUG( "Rest could handle the message" );   
     return r;
 }
