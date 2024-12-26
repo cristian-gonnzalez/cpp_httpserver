@@ -8,7 +8,7 @@
 class ProtocolHandler
 {
     private:
-        std::vector<http::protocols::Protocol *> protocols;
+        std::vector<http::protocols::Protocol *> m_protocols;
 
     public:
         ProtocolHandler();

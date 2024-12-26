@@ -14,6 +14,7 @@ using namespace app::log;
 std::mutex LogDirector::m_mutex;
 
 LogDirector::LogDirector()
+: m_loggers{}
 {   
 #if LOG_DIRECTOR_LOG
     std::cout << "calling LogDirector\n";

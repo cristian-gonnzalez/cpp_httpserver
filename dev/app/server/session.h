@@ -15,7 +15,6 @@ class Session
   private:
     int m_socket;
     std::string m_host;
-    bool m_runnig;
 
     int poll( short events, int msecs_timeout );
 };

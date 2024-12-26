@@ -15,7 +15,7 @@ HDR=-I../dev/app \
 
 
 all:
-	$(CC) -std=c++2a -g $(SRC) $(HDR) -o ../target/$(APP) -lpthread
+	$(CC) -std=c++2a -g -Weffc++ $(SRC) $(HDR) -o ../target/$(APP) -lpthread
 	chmod 755 ../target/$(APP)
 
 #clean:

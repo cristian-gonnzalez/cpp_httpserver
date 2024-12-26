@@ -11,6 +11,7 @@ namespace server
         
         public:
             Exception(std::string msg)
+            : m_msg()
             {
                 m_msg.append("{ error_msg: '");
                 m_msg.append(msg);

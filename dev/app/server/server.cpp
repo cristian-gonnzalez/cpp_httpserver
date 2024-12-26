@@ -17,7 +17,7 @@
 
 
 Server::Server(int port)
-: m_port{port}, m_running{false}
+: m_socket{-1}, m_port{port}, m_running{false}
 {  
     INFO("Calling constructor Server( args )");
     if( (m_socket = socket(AF_INET, SOCK_STREAM, 0) ) < 0)

@@ -24,7 +24,7 @@ namespace app::log
             std::string level_tostr(LogLevel level);
         
         public:
-            ~Logger();
+            virtual ~Logger();
             void set_level( LogLevel level );
             LogLevel get_level() const;
             virtual void write(LogLevel level, const std::string file, const int line, const uint64_t id, const std::string& message) = 0;

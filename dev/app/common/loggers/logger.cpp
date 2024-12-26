@@ -4,6 +4,7 @@ using namespace app::log;
 
 
 Logger::Logger()
+: m_level( LogLevel::normal )
 {
 }
 
