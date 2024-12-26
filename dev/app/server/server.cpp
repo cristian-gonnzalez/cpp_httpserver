@@ -152,9 +152,14 @@ int Server::poll( int msecs_timeout )
 
     if( ( pfds[1].revents & POLLIN ) != 0 )
     {
-      /* consume all awakening events */
+      /* consume the awakening event and then use the bytes_count varibale. Otherwise the compiler will
+       * complain about un-used variable */
       char buf[50];
       ssize_t bytes_count{ ::read( m_awakening_pipe[0], buf, sizeof( buf ) ) };
+      if( bytes_count )
+      {
+        INFO("Awakening event received");
+      }
       return 2;
     }
   }

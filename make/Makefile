@@ -13,11 +13,13 @@ HDR=-I../dev/app \
     -I../dev/app/http \
     -I../dev/app/http/prot
 
-
+#
+# Compiler flags:
+#   -std=c++2a: C++ standard 20 or later
+#   -Weffc++: Effective c++ flag that gives tips or improvements in the code
+#   -Wall: All warning flag to check casting, types comparision, unused variables, ... 
+#   -lpthread: Linking with pthread library that is required to include the thread c++ library
 all:
-	$(CC) -std=c++2a -g -Weffc++ $(SRC) $(HDR) -o ../target/$(APP) -lpthread
+	$(CC) -std=c++2a -g -Wall -Weffc++ $(SRC) $(HDR) -o ../target/$(APP) -lpthread
 	chmod 755 ../target/$(APP)
-
-#clean:
-#	rm -rf $(SRC)/*.o
 
