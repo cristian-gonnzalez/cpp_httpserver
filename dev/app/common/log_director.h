@@ -5,12 +5,14 @@
 #include <string>
 #include <memory>
 #include <mutex>
+#include <source_location>
+
 
 /**
  *  Useful Macros
  */
 #define LOG_WRAPPER( level, msg )   \
-    app::log::LogDirector::get().write( app::log::LogLevel::level, __FILE__, __LINE__, msg )
+    app::log::LogDirector::get().write( app::log::LogLevel::level, msg )
 
 #define LOG( msg )   LOG_WRAPPER( normal, msg )
 #define DEBUG( msg ) LOG_WRAPPER( debug, msg )
@@ -42,7 +44,9 @@ namespace app::log
             /** Singlentons unique instance */
             static LogDirector& get();
         
-            void add(std::shared_ptr<app::log::Logger> logger);
-            void write(app::log::LogLevel level, const std::string& file, const int line, const std::string& message);
+            void add(std::shared_ptr<app::log::Logger> logger);    
+            void write(app::log::LogLevel level, 
+                       const std::string& message,
+                       const std::source_location location = std::source_location::current());
     };
 }

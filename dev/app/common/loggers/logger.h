@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include <cstdint>
+#include <source_location>
 
 
 namespace app::log 
@@ -27,7 +28,11 @@ namespace app::log
             virtual ~Logger();
             void set_level( LogLevel level );
             LogLevel get_level() const;
-            virtual void write(LogLevel level, const std::string file, const int line, const uint64_t id, const std::string& message) = 0;
+            
+            virtual void write(LogLevel level, 
+                               const uint64_t id, 
+                               const std::string& message,
+                               const std::source_location location = std::source_location::current()) = 0;
     };
 
 }

@@ -39,7 +39,10 @@ void LogDirector::add( std::shared_ptr<app::log::Logger> logger )
     m_loggers.push_back( logger );
 }
 
-void LogDirector::write(app::log::LogLevel level, const std::string& file, const int line, const std::string& message)
+
+void LogDirector::write(LogLevel level, 
+                        const std::string& message,
+                        const std::source_location location /*= std::source_location::current() */)
 {   
    std::stringstream ss;
    ss << std::this_thread::get_id(); 
@@ -48,6 +51,6 @@ void LogDirector::write(app::log::LogLevel level, const std::string& file, const
     for(auto logger:m_loggers)
     {
         std::lock_guard<std::mutex> lock(m_mutex);
-        logger->write(level, file, line, id, message );
+        logger->write(level, id, message, location );
     }
 }
