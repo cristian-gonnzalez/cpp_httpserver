@@ -8,12 +8,12 @@ using namespace http;
 Request::Request( std::string method, std::string target, std::string http_version, std::string body)
 : Message{ http_version, body }, m_method{method}, m_target{target}
 {
-  INFO("Calling Request( args )");
+  app_info << "Calling Request( args )\n";
 }
 
 Request::~Request()
 {
-  INFO("Calling ~Request");
+  app_info << "Calling ~Request\n";
 }
 
 std::string Request::to_str()

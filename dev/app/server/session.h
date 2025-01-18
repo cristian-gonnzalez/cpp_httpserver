@@ -13,7 +13,7 @@ class Session
      int write(std::string msg);
 
   private:
-    int m_socket;
+    int         m_socket;
     std::string m_host;
 
     int poll( short events, int msecs_timeout );

@@ -13,7 +13,7 @@ Rest::~Rest()
 {
 }
 
-http::Request Rest::request_load( std::string &str )
+http::Request Rest::serialize_request( std::string &str )
 {
     std::string method, target, version, body;
 
@@ -49,11 +49,11 @@ http::Request Rest::request_load( std::string &str )
 
 http::Response Rest::handle( std::string in )
 {
-    DEBUG( "Handling message with Rest" );
+    app_debug << "Handling message with Rest\n";
 
     try
     {
-        Request req{ request_load(in) };
+        Request req{ serialize_request(in) };
         // TODO: handle request here
     }
     catch(const std::exception& e)
@@ -64,6 +64,6 @@ http::Response Rest::handle( std::string in )
     
     Response r{ "HTTP/1.1", "{}" };
  
-    DEBUG( "Rest could handle the message" );   
+    app_debug << "Rest could handle the message\n";   
     return r;
 }

@@ -1,20 +1,20 @@
 #include "session.h"
+#include "log_director.h"
 #include <iostream>
 #include <string.h>
 #include <unistd.h>
 #include <sys/socket.h>
 #include <poll.h>
-#include "log_director.h"
 
 Session::Session(int socket, std::string host)
 : m_socket{socket}, m_host{host}
 {
-  INFO("Calling Session");
+  app_info << "Calling Session\n";
 }
 
 Session::~Session()
 {
-  INFO("Calling ~Session");
+  app_info << "Calling ~Session\n";
   close(m_socket);
 }
 
@@ -37,8 +37,6 @@ int Session::poll( short events, int msecs_timeout )
 
   return -1;
 }
-
-
 
 std::string Session::read(int timeout/*=0*/)
 {

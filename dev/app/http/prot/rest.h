@@ -10,12 +10,12 @@ namespace http::protocols {
     class Rest : public http::protocols::Protocol
     {
         private:
+            Request serialize_request( std::string &str );
 
         public:
             Rest();
             ~Rest();
 
-            Request request_load( std::string &str );
             http::Response handle( std::string in );
     };
 

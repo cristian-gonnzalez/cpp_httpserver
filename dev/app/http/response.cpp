@@ -5,19 +5,19 @@ using namespace http;
 
 Response::Response( std::string http_version, std::string body)
 : Message{ http_version, body }
-{
-  INFO("Calling Response( args )");
+{  
+  app_info << "Calling Response( args )\n";
 }
 
 Response::Response( )
 : Message{ "HTTP/1.1", "{}" }
 {
-  INFO("Calling Response");
+  app_info << "Calling Response\n";
 }
 
 Response::~Response()
 {
-  INFO("Calling ~Response");
+  app_info << "Calling ~Response\n";
 }
 
 std::string Response::to_str()

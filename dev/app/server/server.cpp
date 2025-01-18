@@ -19,7 +19,7 @@
 Server::Server(int port)
 : m_socket{-1}, m_port{port}, m_running{false}
 {  
-    INFO("Calling constructor Server( args )");
+    app_info << "Calling constructor Server( args )\n";
     if( (m_socket = socket(AF_INET, SOCK_STREAM, 0) ) < 0)
     {
         throw ServerExeption( "Error in socket");
@@ -39,7 +39,8 @@ Server::Server(int port)
 
 Server::~Server()
 {
-  INFO("Calling ~Server");
+  app_info << "Calling ~Server\n";
+
   // RAII: we must close all resources adquired in the constructor
   stop();
   close(m_socket);
@@ -50,14 +51,10 @@ Server::~Server()
 
 void handle_session( std::unique_ptr<Session> s )
 {  
-  std::stringstream ss;
-  ss << std::this_thread::get_id();
-  uint64_t id = std::stoull(ss.str());
-
-  LOG( "Session " + std::to_string( id ) );
+  app_log << "Session " << std::this_thread::get_id() << std::endl;
 
   std::string str_in{ s->read(0) };
-  DEBUG("mesasge in: \n\n" + str_in + "\n" );
+  app_debug << "mesasge in: \n\n" + str_in << std::endl;
  
   try
   {
@@ -65,12 +62,13 @@ void handle_session( std::unique_ptr<Session> s )
 
       http::Response resp = prot_handler.handle( str_in );
       std::string str_out = resp.to_str();
-      DEBUG("mesasge out: \n\n" + str_out + "\n" );
+      
+      app_debug << "mesasge out: \n\n" + str_out << std::endl;
       s->write( str_out );
   }
   catch(const std::exception& e)
   {
-    ERROR( e.what() );
+    app_error << e.what() << std::endl;
   }
 }
 
@@ -158,7 +156,7 @@ int Server::poll( int msecs_timeout )
       ssize_t bytes_count{ ::read( m_awakening_pipe[0], buf, sizeof( buf ) ) };
       if( bytes_count )
       {
-        INFO("Awakening event received");
+        app_info << "Awakening event received\n";
       }
       return 2;
     }

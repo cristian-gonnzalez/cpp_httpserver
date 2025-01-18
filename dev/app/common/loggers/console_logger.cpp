@@ -1,6 +1,5 @@
 #include "console_logger.h"
-#include <ctime>
-#include <thread> 
+#include <iostream> 
 
 using namespace app::log;
 
@@ -12,26 +11,8 @@ CLogger::~CLogger()
 {
 }
 
-
-void CLogger::write(LogLevel level, 
-                    const uint64_t id, 
-                    const std::string& message,
-                    const std::source_location location /*= std::source_location::current() */)
+void CLogger::write(const std::string& message)
 {
-   if( level > m_level )
-    return;
-      
-  time_t now{ time(0) };
-  tm* timeinfo{ localtime(&now) };
-  char timestamp[20];
-  strftime( timestamp, sizeof(timestamp), "%Y-%m-%d %H:%M:%S", timeinfo );
-              
-  std::cout << level_tostr( level ) << 
-               location.file_name() << ':' <<
-               location.line() << ':' <<
-               location.column() << " [" <<
-               location.function_name() << "] : " <<
-               "[" << timestamp << "] " <<
-               "("<< id << ")" << ": " << message << std::endl;
+  std::cout << message;
 }
 
