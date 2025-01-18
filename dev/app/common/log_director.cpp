@@ -97,11 +97,11 @@ LogBuffer& LogBuffer::operator<<(const std::source_location& location)
 
     std::stringstream ss;    
     ss << location.file_name() << ':'
-                << location.line() << ':'
-                << location.column() 
-                << " [" << location.function_name() << "] : "
-                << "[" << timestamp << "] "
-                << "(" << std::this_thread::get_id() << ")" << ": ";
+       << location.line() << ':'
+       << location.column() 
+       << " [" << location.function_name() << "]:"
+       << " [" << timestamp << "]"
+       << " (" << std::this_thread::get_id() << "): ";
     
     m_buffer += ss.str();
 
