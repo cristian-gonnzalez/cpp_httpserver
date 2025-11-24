@@ -24,7 +24,7 @@ int main()
 
         signals.async_wait( [&](const asio::error_code&, int s)
                             {
-                                std::cout << "Received signal: " << s << "\n";
+                                app_debug << "Received signal: " << s << "\n";
                                 ctx.stop();            // triggers shutdown
                             } );
 
@@ -40,12 +40,12 @@ int main()
         ctx.run();
 
         // Clean shutdown
-        std::cout << "Stopping server...\n";
+        app_debug << "Stopping server...\n";
         server->stop();
-        std::cout << "Exit.\n";
+        app_debug << "Exit.\n";
 
     } catch (std::exception& e) {
-        std::cerr << "Fatal: " << e.what() << "\n";
+        app_fatal << "Fatal: " << e.what() << "\n";
         return -1;
     }
 

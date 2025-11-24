@@ -3,8 +3,8 @@ import json
 
 
 headers = {"Content-Type":"application/json"}
-payload = {}
-url = "http://127.0.0.1:8080"
+payload = { 'a' : 1, 'b' : 1 }
+url = "http://127.0.0.1:8080/add"
 
 
 response = requests.post(url, data=json.dumps(payload), headers=headers)

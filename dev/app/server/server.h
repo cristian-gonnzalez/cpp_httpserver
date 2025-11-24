@@ -39,11 +39,13 @@ class Server
 
         // task queue + thread pool
         std::deque<std::shared_ptr<Connection>>   _queue{};
+        
+        size_t                                    _worker_num{0};
         std::vector<std::thread>                  _workers{};
         std::mutex                                _queue_mtx{};
         std::condition_variable                   _queue_cv{};
 
-        void start_thread_pool( size_t worker_num );
+        void start_tp( size_t worker_num );
 };
 
 class ServerExeption : public server::Exception

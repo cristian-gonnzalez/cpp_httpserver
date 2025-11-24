@@ -37,7 +37,7 @@ void LogDirector::write(LogLevel level, const std::string& message)
     // Higher enum value == more severe.
     {
         std::lock_guard lock(_mutex);
-        if (static_cast<int>(level) < static_cast<int>(_level))
+        if (static_cast<int>(level) >= static_cast<int>(_level))
             return;
 
         // Copy loggers under lock to avoid iterator invalidation if someone calls add() concurrently.

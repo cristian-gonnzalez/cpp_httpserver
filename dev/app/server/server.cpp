@@ -15,8 +15,6 @@
 
 static void handle_session(std::shared_ptr<Connection> conn)
 {
-  app_log << "Connection " << std::this_thread::get_id() << " : " << *conn << std::endl;
-
   std::string str_in{ conn->read(0) };
   app_debug << "message in: \n\n" << str_in << std::endl;
 
@@ -36,8 +34,10 @@ static void handle_session(std::shared_ptr<Connection> conn)
 }
 
 Server::Server(int port, size_t worker_num )
-: _port{port}
+: _port{port}, _worker_num{worker_num}
 {  
+    app_debug << "Calling Server\n";
+
     if( _socket = socket(AF_INET, SOCK_STREAM, 0); 
         _socket < 0)
         throw ServerExeption( "Error creating socket");
@@ -52,14 +52,12 @@ Server::Server(int port, size_t worker_num )
     bind();
     if (listen(_socket, 10) < 0)
         throw ServerExeption("Error in listen()");
-
-    start_thread_pool( worker_num );
 }
 
 
 Server::~Server()
 {
-  app_log << "Calling ~Server\n";
+  app_debug << "Calling ~Server\n";
 
   // RAII: we must close all resources adquired in the constructor
   stop();
@@ -72,45 +70,6 @@ Server::~Server()
 }
 
 
-void Server::start_thread_pool( size_t worker_num )
-{
-    // start worker threads (thread pool)
-    size_t n = (worker_num == 0 ? 1 : worker_num);
-    for(size_t i=0; i<n ; ++i)
-    {
-        _workers.emplace_back( [this]()
-                                {
-                                    while(true)
-                                    {
-                                        std::shared_ptr<Connection> task;
-                                        {
-                                            std::unique_lock lock( _queue_mtx );
-                                            _queue_cv.wait( lock, 
-                                                            [this]()
-                                                            { 
-                                                              return !_queue.empty() || !_running.load(); 
-                                                            } );
-  
-                                            if ( !_running.load() && _queue.empty() )
-                                                return;
-  
-                                            task = std::move(_queue.front());
-                                            _queue.pop_front();
-                                        }
-
-                                        try 
-                                        { 
-                                          handle_session(task); 
-                                        }
-                                        catch(const std::exception& e) 
-                                        { 
-                                          app_error << "Thread-pool exception: " << e.what() << std::endl; 
-                                        }
-                                    }
-                                });
-    }
-}
-
 void Server::stop()
 {
   _running = false;
@@ -122,7 +81,6 @@ void Server::stop()
 
   // notify worker threads (in case they are waiting on empty queue)
   _queue_cv.notify_all();
-
 
   for(auto& w: _workers)
   {
@@ -173,7 +131,7 @@ int Server::poll( int msecs_timeout )
       ssize_t bytes_count{ ::read( _awakening_pipe[0], buf, sizeof( buf ) ) };
       if( bytes_count )
       {
-        std::cout << "Awakening event received\n";
+        app_debug << "Awakening event received\n";
       }
       return 2;
     }
@@ -214,18 +172,66 @@ std::shared_ptr<Connection> Server::wait_connection(int timeout_ms)
   throw TimeoutError( "Time-out");
 }
 
+void Server::start_tp( size_t worker_num )
+{
+    // start worker threads (thread pool)
+    size_t n = (worker_num == 0 ? 1 : worker_num);
+    for(size_t i=0; i<n ; ++i)
+    {
+        _workers.emplace_back( [this]()
+                                {
+                                        
+                                    while(true)
+                                    {
+                                        std::shared_ptr<Connection> task{ nullptr };
+                                        
+                                        {
+                                            std::unique_lock lock( _queue_mtx );
+                                            
+                                            app_debug << "tp - waiting ...\n"; 
+                                            _queue_cv.wait( lock, 
+                                                            [this]()
+                                                            { 
+                                                              return !_queue.empty() || !_running.load(); 
+                                                            } );
+  
+                                            if ( !_running.load() && _queue.empty() )
+                                                return;
+  
+                                            task = std::move(_queue.front());
+                                            _queue.pop_front();
+                                        }
+
+                                        try 
+                                        { 
+                                          app_debug << "tp - handle\n"; 
+                                          handle_session(task); 
+                                        }
+                                        catch(const std::exception& e) 
+                                        { 
+                                          app_error << "tp exception: " << e.what() << std::endl; 
+                                        }
+                                    }
+                                });
+    }
+}
+
 
 void Server::run()
 {
-    std::cout << "Running server\n";
+    app_debug << "Running server\n";
     _running = true;
+
+    start_tp(_worker_num);
 
     while( _running )
     {
         try
         {
             auto conn = wait_connection(1000);
-  
+
+            app_debug << "New connection: "<< conn << std::endl; 
+                                        
             // enqueue connection for processing by a worker
             {
                 std::lock_guard lock(_queue_mtx);
@@ -246,9 +252,6 @@ void Server::run()
         }
     }
 
-    std::cout << "Server stopped...\n";
-  }
-
-
-
+    app_debug << "Server stopped...\n";
+}
 

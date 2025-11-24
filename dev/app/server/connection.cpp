@@ -6,10 +6,12 @@
 #include <sys/socket.h>
 #include <poll.h>
 
+#include "log_director.h"
+
 Connection::Connection(int socket, std::string host)
 : _socket{socket}, _host{host}
 {
-  std::cout << "Calling Connection\n";
+  app_debug << "Calling Connection\n";
 
   if (pipe(_awakening_pipe) < 0)
       throw ConnectionException( "Error creating pipe");
@@ -17,7 +19,7 @@ Connection::Connection(int socket, std::string host)
 
 Connection::~Connection()
 {
-  std::cout << "Calling ~Connection\n";
+  app_debug << "Calling ~Connection\n";
 
   interrup();
 
@@ -90,7 +92,7 @@ int Connection::poll( short events, int msecs_timeout )
       ssize_t bytes_count{ ::read( _awakening_pipe[0], buf, sizeof( buf ) ) };
       if( bytes_count )
       {
-        std::cout << "Awakening event received\n";
+        app_debug << "Awakening event received\n";
       }
       throw ConnectionException("Awakening event received");
     }
