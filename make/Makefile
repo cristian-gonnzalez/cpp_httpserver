@@ -1,5 +1,9 @@
+#
+# Rules
+#
+ 
 CC=g++
-APP=app
+TARGET=../target/app
 SRC=../dev/app/*cpp \
     ../dev/app/common/*cpp \
     ../dev/app/common/loggers/*cpp \
@@ -12,6 +16,15 @@ HDR=-I../dev/app \
     -I../dev/app/server \
     -I../dev/app/http \
     -I../dev/app/http/prot
+     	     
+		 
+all: $(TARGET)
+
+clean:
+	(rm -f *.o && rm -f $(TARGET))
+
+$(TARGET): objects  
+	$(CC) *.o -o $(TARGET) -lpthread
 
 #
 # Compiler flags:
@@ -19,7 +32,8 @@ HDR=-I../dev/app \
 #   -Weffc++: Effective c++ flag that gives tips or improvements in the code
 #   -Wall: All warning flag to check casting, types comparision, unused variables, ... 
 #   -lpthread: Linking with pthread library that is required to include the thread c++ library
-all:
-	$(CC) -std=c++2a -g -Wall -Weffc++ $(SRC) $(HDR) -o ../target/$(APP) -lpthread
-	chmod 755 ../target/$(APP)
+    
+objects:
+	$(CC) -c -std=c++2a -g -Wall -Weffc++  $(SRC) $(HDR) 
+
 
