@@ -18,6 +18,11 @@ namespace http
 
         ~Request() override;
 
+        std::string get_target() const
+        {
+            return _target;
+        };
+
         std::string to_str() override;
     };
 }

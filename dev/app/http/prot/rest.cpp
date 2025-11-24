@@ -4,6 +4,7 @@
 #include <sstream>
 
 #include "log_director.h"
+#include "cmd_handler.h"
 
 using namespace http::protocols;
 
@@ -66,22 +67,31 @@ http::Request Rest::parse_request(const std::string& raw)
     return http::Request(method, target, version, body);
 }
 
+
 http::Response Rest::handle(std::string in)
 {
-    app_debug << "Handling message with Rest" << std::endl;
+    app_debug << "Rest::handle" << std::endl;
 
     try
     {
         http::Request req = parse_request(in);
-        // TODO: dispatch your "routes" here
+
+        // Extract "/add" -> "add"
+        std::string target = req.get_target();
+        if (!target.empty() && target[0] == '/')
+            target = target.substr(1);
+
+        CommandHandler cmd_handler;
+
+        std::string json_result = cmd_handler.handle(target, req.get_body());
+
+        return http::Response("HTTP/1.1", json_result);
     }
     catch (const std::exception& e)
     {
         app_error << e.what() << std::endl;
-        throw; // correct rethrow
+
+        return http::Response( "HTTP/1.1",
+                               std::string("{ \"error\": \"") + e.what() + "\" }" );
     }
-
-    app_debug << "Rest handled the message OK" << std::endl;
-
-    return http::Response("HTTP/1.1", "{}");
 }

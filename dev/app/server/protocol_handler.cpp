@@ -4,7 +4,7 @@
 
 ProtocolHandler::ProtocolHandler()
 {
-    _protocols.emplace_back(std::make_unique<http::protocols::Rest>());
+    _protocols.emplace_back( std::make_unique<http::protocols::Rest>() );
 }
 
 http::Response ProtocolHandler::handle( std::string in )

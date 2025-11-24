@@ -9,7 +9,11 @@ namespace http
         public:
             virtual ~Message() = default;               
             virtual std::string to_str() = 0; 
-            
+            virtual std::string get_body() const
+            {
+                return _body;
+            }
+
         protected:
             std::string _http_version;
             std::string _body;
