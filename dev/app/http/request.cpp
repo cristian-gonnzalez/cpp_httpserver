@@ -1,34 +1,33 @@
 #include "request.h"
+
 #include <sstream>
 #include "log_director.h"
 
 using namespace http;
 
-
-Request::Request( std::string method, std::string target, std::string http_version, std::string body)
-: Message{ http_version, body }, m_method{method}, m_target{target}
+Request::Request(std::string_view method,
+                 std::string_view target,
+                 std::string_view http_version,
+                 std::string_view body)
+: Message(http_version, body), _method(method), _target(target)
 {
-  app_info << "Calling Request( args )\n";
+    app_info << "Request::Request()" << std::endl;
 }
 
 Request::~Request()
 {
-  app_info << "Calling ~Request\n";
+    app_info << "Request::~Request()" << std::endl;
 }
 
 std::string Request::to_str()
 {
-    std::string r;
-    std::stringstream ss{};
+    std::ostringstream ss;
 
-    ss << m_method << " "
-       << m_target << " "
-       << m_http_version << " \n"
-       << "Content-Type: application/json\n"
-       << "Content-Length: " << m_body.size() << " \n"
-       << m_body << "\n";
+    ss << _method << " " << _target << " " << _http_version << "\r\n"
+       << "Content-Type: application/json\r\n"
+       << "Content-Length: " << _body.size() << "\r\n"
+       << "\r\n"
+       << _body;
 
-    ss >> r;
-
-    return r;
+    return ss.str();
 }

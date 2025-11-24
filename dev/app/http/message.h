@@ -1,21 +1,23 @@
 #pragma once
-
 #include <string>
+#include <string_view>
 
 namespace http
 {
     class Message
     {
-        protected:
-            std::string m_http_version;
-            std::string m_body;
-
-            // Construnctor is protected because this class is used only as interface
-            Message(std::string http_version, std::string body);
-
         public:
+            virtual ~Message() = default;               
+            virtual std::string to_str() = 0; 
             
-            virtual ~Message();
-            virtual std::string to_str() = 0;
-    };  
+        protected:
+            std::string _http_version;
+            std::string _body;
+
+            // protected: base is an interface
+            Message(std::string_view http_version, std::string_view body);
+    };
 }
+
+
+

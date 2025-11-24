@@ -3,20 +3,17 @@
 #include "protocol.h"
 #include "request.h"
 
-
 namespace http::protocols {
 
-
-    class Rest : public http::protocols::Protocol
+    class Rest : public Protocol
     {
         private:
-            Request serialize_request( std::string &str );
+            http::Request parse_request(const std::string& raw);
 
         public:
-            Rest();
-            ~Rest();
+            Rest() = default;
+            ~Rest() override = default;
 
-            http::Response handle( std::string in );
+            http::Response handle(std::string in) override;
     };
-
 }

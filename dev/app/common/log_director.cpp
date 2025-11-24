@@ -1,134 +1,158 @@
 #include "log_director.h"
 
-/** Enables inner logging. */
-#ifndef LOG_DIRECTOR_LOG
-#  define LOG_DIRECTOR_LOG 0
-#endif
+#include <ctime>
+#include <iomanip>
+#include <iostream>
+#include <thread>
 
 using namespace app::log;
-
-std::mutex LogDirector::m_mutex;
-
-LogDirector::LogDirector()
-: m_loggers{}
-{   
-#if LOG_DIRECTOR_LOG
-    std::cout << "calling LogDirector\n";
-#endif
-}
-
-LogDirector::~LogDirector()
-{
-#if LOG_DIRECTOR_LOG
-    std::cout << "calling ~LogDirector\n";
-#endif
-}
 
 LogDirector* LogDirector::get()
 {
     static LogDirector instance;
-	return &instance;
+    return &instance;
 }
 
-void LogDirector::add( std::shared_ptr<app::log::Logger> logger )
+void LogDirector::add(std::shared_ptr<Logger> logger)
 {
-    m_loggers.push_back( logger );
+    std::lock_guard lock(_mutex);
+    _loggers.push_back(std::move(logger));
 }
 
-
-void LogDirector::set_level( const LogLevel level )
+void LogDirector::set_level(LogLevel level) noexcept
 {
-    m_level = level;
+    std::lock_guard lock(_mutex);
+    _level = level;
 }
 
-LogLevel LogDirector::get_level() const 
+LogLevel LogDirector::get_level() const noexcept
 {
-    return m_level;
+    std::lock_guard lock(_mutex);
+    return _level;
 }
 
-void LogDirector::write(const LogBuffer& buf)
-{   
-    if( buf.get_level() >= m_level)
-        return;
-
-    for(auto logger:m_loggers)
+void LogDirector::write(LogLevel level, const std::string& message)
+{
+    // Only log messages with severity >= configured level.
+    // Higher enum value == more severe.
     {
-        std::lock_guard<std::mutex> lock(m_mutex);
-        logger->write(buf.to_string());
+        std::lock_guard lock(_mutex);
+        if (static_cast<int>(level) < static_cast<int>(_level))
+            return;
+
+        // Copy loggers under lock to avoid iterator invalidation if someone calls add() concurrently.
+        auto loggers_copy = _loggers;
+
+        // Unlock while performing IO? No — keep the lock while writing to guarantee that the full message
+        // appears in each logger contiguously and that two messages from different threads don't interleave.
+        // So continue holding lock and write to each logger.
+        for (auto& logger : loggers_copy)
+        {
+            if (logger)
+            {
+                try
+                {
+                    logger->write(message);
+                }
+                catch (...)
+                {
+                    // Swallow exceptions from loggers to avoid crashing the application.
+                    // In production you might want to record the error in a fallback sink.
+                }
+            }
+        }
     }
 }
 
 
-LogBuffer::LogBuffer(LogLevel level, LogDirector* director)
-: m_director{director}, m_level{level}, m_buffer{""}
+LogBuffer::LogBuffer(LogLevel level)
+    : _level(level)
 {
+    // Initial buffer left empty. Source location will be provided by operator<< macro.
 }
 
-LogBuffer::LogBuffer(const LogBuffer& other)
-: m_director{other.m_director}, m_level{other.m_level}, m_buffer{other.m_buffer}
+LogBuffer::LogBuffer(LogBuffer&& other) noexcept
+    : _level(other._level),
+      _buf(),
+      _location(other._location),
+      _flushed(other._flushed)
 {
+    _buf << other._buf.str();
+    other._flushed = true;
 }
 
-LogBuffer& LogBuffer::operator=(const LogBuffer& other)
+LogBuffer& LogBuffer::operator=(LogBuffer&& other) noexcept
 {
-    m_director = other.m_director;
-    m_level = other.m_level;
-    m_buffer = other.m_buffer;
-
-    return *this;
-}
-
-LogLevel LogBuffer::get_level() const
-{
-    return m_level;
-}
-
-std::string LogBuffer::to_string() const
-{
-    return m_buffer;
-}
-
-LogBuffer& LogBuffer::operator<<(const std::source_location& location)
-{         
-    time_t now{ time(0) };
-    tm* timeinfo{ localtime(&now) };
-    char timestamp[20];
-    strftime( timestamp, sizeof(timestamp), "%Y-%m-%d %H:%M:%S", timeinfo );
-
-    std::stringstream ss;    
-    ss << location.file_name() << ':'
-       << location.line() << ':'
-       << location.column() 
-       << " [" << location.function_name() << "]:"
-       << " [" << timestamp << "]"
-       << " (" << std::this_thread::get_id() << "): ";
-    
-    m_buffer += ss.str();
-
-    return *this;
-}
-
-LogBuffer& LogBuffer::operator<<(const char* cstr)
-{         
-    std::string s{cstr};
-    m_buffer += s;
-    
-    if(s.find("\n") != std::string::npos  )
+    if (this != &other)
     {
-        m_director->write( *this );
-        m_buffer.clear();
+        _level = other._level;
+        _buf.str("");
+        _buf.clear();
+        _buf << other._buf.str();
+        _location = other._location;
+        _flushed = other._flushed;
+        other._flushed = true;
     }
-
     return *this;
 }
 
-LogBuffer& LogBuffer::operator<<(
-            std::basic_ostream<char, std::char_traits<char>>& (*func) (std::basic_ostream<char, std::char_traits<char>>&) )
+LogBuffer::~LogBuffer()
 {
-    m_buffer += "\n";
+    if (!_flushed && _buf.str().size() > 0)
+    {
+        emit_to_director();
+    }
+}
 
-    m_director->write( *this );
-    m_buffer.clear();
+LogBuffer& LogBuffer::operator<<(const std::source_location& loc)
+{
+    _location = loc;
 
-    return *this;                
+    // prepend source information and timestamp
+    auto now = std::chrono::system_clock::now();
+    std::time_t t = std::chrono::system_clock::to_time_t(now);
+    tm local_tm;
+
+    localtime_r(&t, &local_tm);
+
+    std::ostringstream ss;
+    ss << loc.file_name() << ":" << loc.line() << ":" << loc.column()
+       << " [" << loc.function_name() << "] "
+       << "[" << std::put_time(&local_tm, "%Y-%m-%d %H:%M:%S") << "] "
+       << "(" << std::this_thread::get_id() << "): ";
+
+    _buf << ss.str();
+    return *this;
+}
+
+LogBuffer& LogBuffer::operator<<(Manip manip)
+{
+    // Common manip: std::endl will insert newline and flush.
+    // Insert newline (we don't inspect the manip, we assume it's newline-like).
+    _buf << std::endl;
+    emit_to_director();
+    _flushed = true;
+    return *this;
+}
+
+void LogBuffer::flush()
+{
+    if (!_flushed && _buf.str().size() > 0)
+    {
+        emit_to_director();
+        _flushed = true;
+    }
+}
+
+void LogBuffer::emit_to_director()
+{
+    // Build final message: prefix (already added by source_location operator) + buffer content.
+    const std::string message = _buf.str();
+
+    // Use singleton director
+    LogDirector* director = LogDirector::get();
+    if (director)
+    {
+        director->write(_level, message);
+    }
 }

@@ -1,30 +1,30 @@
 #include "response.h"
 #include "log_director.h"
+#include <sstream>
 
 using namespace http;
 
-Response::Response( std::string http_version, std::string body)
-: Message{ http_version, body }
-{  
-  app_info << "Calling Response( args )\n";
-}
-
-Response::Response( )
-: Message{ "HTTP/1.1", "{}" }
+Response::Response(std::string_view http_version,
+                   std::string_view body)
+: Message(http_version, body)
 {
-  app_info << "Calling Response\n";
+    app_info << "Response::Response()" << std::endl;
 }
 
 Response::~Response()
 {
-  app_info << "Calling ~Response\n";
+    app_info << "Response::~Response()" << std::endl;
 }
 
 std::string Response::to_str()
 {
-    std::string r{ "HTTP/1.1 200 OK\n"
-                   "Content-Length: 2\n"
-                   "Content-Type: application/json\n"
-                   "{}"};
-    return r;
+    std::ostringstream ss;
+
+    ss << _http_version << " 200 OK\r\n"
+       << "Content-Type: application/json\r\n"
+       << "Content-Length: " << _body.size() << "\r\n"
+       << "\r\n"
+       << _body;
+
+    return ss.str();
 }

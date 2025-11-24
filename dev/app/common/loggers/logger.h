@@ -6,10 +6,10 @@ namespace app::log
     class Logger
     {
         protected:
-            Logger();
+            Logger() = default;
             
         public:
-            virtual ~Logger();
+            virtual ~Logger() = default;
             
             virtual void write(const std::string& message) = 0;
     };

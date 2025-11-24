@@ -1,70 +1,33 @@
 #include "server.h"
 #include <iostream>
-#include <chrono>
-#include <string.h>
-#include <vector>
-#include <errno.h>
+#include <cstring>
 #include <thread>
-#include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <unistd.h> 
+#include <unistd.h>
 #include <poll.h>
 
 #include <syncstream>
 #include "log_director.h"
+#include "protocol_handler.h"
 
 
-Server::Server(int port)
-: m_socket{-1}, m_port{port}, m_running{false}
-{  
-    app_info << "Calling constructor Server( args )\n";
-    if( (m_socket = socket(AF_INET, SOCK_STREAM, 0) ) < 0)
-    {
-        throw ServerExeption( "Error in socket");
-    }
- 
-    int on{ 1 };   // no funciona
-  	if (setsockopt(m_socket, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) < 0)
-    {
-        throw ServerExeption( "Error in setsockopt");
-    }
-
-    if (pipe(m_awakening_pipe) < 0) 
-    { 
-        throw ServerExeption( "Error in pipe");
-    } 	
-}
-
-Server::~Server()
+static void handle_session(std::shared_ptr<Connection> conn)
 {
-  app_info << "Calling ~Server\n";
+  app_log << "Connection " << std::this_thread::get_id() << " : " << *conn << std::endl;
 
-  // RAII: we must close all resources adquired in the constructor
-  stop();
-  close(m_socket);
-  close(m_awakening_pipe[0]);
-  close(m_awakening_pipe[1]);
-}
+  std::string str_in{ conn->read(0) };
+  app_debug << "message in: \n\n" << str_in << std::endl;
 
-
-void handle_session( std::unique_ptr<Session> s )
-{  
-  app_log << "Session " << std::this_thread::get_id() << std::endl;
-
-  std::string str_in{ s->read(0) };
-  app_debug << "mesasge in: \n\n" + str_in << std::endl;
- 
   try
   {
       ProtocolHandler prot_handler{};
-
       http::Response resp = prot_handler.handle( str_in );
       std::string str_out = resp.to_str();
-      
-      app_debug << "mesasge out: \n\n" + str_out << std::endl;
-      s->write( str_out );
+
+      app_debug << "message out: \n\n" << str_out << std::endl;
+      conn->write( str_out );
   }
   catch(const std::exception& e)
   {
@@ -72,72 +35,126 @@ void handle_session( std::unique_ptr<Session> s )
   }
 }
 
+Server::Server(int port, size_t worker_num )
+: _port{port}
+{  
+    if( _socket = socket(AF_INET, SOCK_STREAM, 0); 
+        _socket < 0)
+        throw ServerExeption( "Error creating socket");
+    
+    int on{ 1 };   // no funciona
+  	if (setsockopt(_socket, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) < 0)
+        throw ServerExeption( "Error in setsockopt(SO_REUSEADDR)");
+    
+    if (pipe(_awakening_pipe) < 0) 
+        throw ServerExeption( "Error creating pipe");
+    
+    bind();
+    if (listen(_socket, 10) < 0)
+        throw ServerExeption("Error in listen()");
 
-void Server::run()
-{
-  bind();
-  listen(m_socket, 10);
-
-  std::vector<std::jthread> workers;
-
-  m_running = true;
-  while(m_running) 
-  {
-    int r{ poll(0) }; 
-    if( r < 0)
-    {
-      throw ServerExeption( "Error in poll");
-    }
-    // 1 means a new connection was made. other value could an awakeking event or timeout
-    if( r == 1 ) 
-    {
-      workers.push_back(  std::jthread( handle_session, accept(0) ));
-    }
-    // awake event
-    if( r == 2 ) 
-    {
-      //TOD: do sth here to close session
-    }
-  }
+    start_thread_pool( worker_num );
 }
 
+
+Server::~Server()
+{
+  app_log << "Calling ~Server\n";
+
+  // RAII: we must close all resources adquired in the constructor
+  stop();
+  if( _socket >= 0)
+    close(_socket);
+  if (_awakening_pipe[0] >= 0) 
+    close(_awakening_pipe[0]);
+  if (_awakening_pipe[1] >= 0) 
+    close(_awakening_pipe[1]);
+}
+
+
+void Server::start_thread_pool( size_t worker_num )
+{
+    // start worker threads (thread pool)
+    size_t n = (worker_num == 0 ? 1 : worker_num);
+    for(size_t i=0; i<n ; ++i)
+    {
+        _workers.emplace_back( [this]()
+                                {
+                                    while(true)
+                                    {
+                                        std::shared_ptr<Connection> task;
+                                        {
+                                            std::unique_lock lock( _queue_mtx );
+                                            _queue_cv.wait( lock, 
+                                                            [this]()
+                                                            { 
+                                                              return !_queue.empty() || !_running.load(); 
+                                                            } );
+  
+                                            if ( !_running.load() && _queue.empty() )
+                                                return;
+  
+                                            task = std::move(_queue.front());
+                                            _queue.pop_front();
+                                        }
+
+                                        try 
+                                        { 
+                                          handle_session(task); 
+                                        }
+                                        catch(const std::exception& e) 
+                                        { 
+                                          app_error << "Thread-pool exception: " << e.what() << std::endl; 
+                                        }
+                                    }
+                                });
+    }
+}
 
 void Server::stop()
 {
-  // writes an awakeing event
-  write(m_awakening_pipe[1], "1", 1); 
-  m_running = false;
+  _running = false;
+
+  // wake accept/poll loop
+  const char signal = 1;
+  if (_awakening_pipe[1] >= 0)
+    ::write(_awakening_pipe[1], &signal, 1);
+
+  // notify worker threads (in case they are waiting on empty queue)
+  _queue_cv.notify_all();
+
+
+  for(auto& w: _workers)
+  {
+      if (w.joinable())
+          w.join();
+  }
+
+  _workers.clear();
 }
 
-struct sockaddr_in Server::build_addr_in()
+
+void Server::bind()
 {  
   struct sockaddr_in addr_in = {
     .sin_family = AF_INET,
-    .sin_port = htons( m_port ),
+    .sin_port = htons( _port ),
     .sin_addr = { .s_addr = INADDR_ANY },
   };
 
   memset(&(addr_in.sin_zero), 0, 8);
   
-  return addr_in;
+  if( (::bind(_socket, reinterpret_cast<sockaddr*>(&addr_in), sizeof(addr_in))) < 0)
+    throw ServerExeption( "Error in bind");
 }
 
-void Server::bind()
-{  
-  struct sockaddr_in addr_in{ build_addr_in() };
-
-  if( (::bind(m_socket, (struct sockaddr *)&addr_in, sizeof(addr_in))) < 0)
-  { 
-    throw new ServerExeption( "Error in bind");
-  }
-}
 
 
 int Server::poll( int msecs_timeout )
 {
   struct pollfd pfds[2] = {
-    { .fd = m_socket, .events = POLLIN, .revents = 0},
-    { .fd = m_awakening_pipe[0], .events = POLLIN, .revents = 0}
+    { .fd = _socket, .events = POLLIN, .revents = 0},
+    { .fd = _awakening_pipe[0], .events = POLLIN, .revents = 0}
   };
 
   size_t n{ ( sizeof( pfds ) / sizeof( ( pfds )[0] ) ) };
@@ -153,36 +170,85 @@ int Server::poll( int msecs_timeout )
       /* consume the awakening event and then use the bytes_count varibale. Otherwise the compiler will
        * complain about un-used variable */
       char buf[50];
-      ssize_t bytes_count{ ::read( m_awakening_pipe[0], buf, sizeof( buf ) ) };
+      ssize_t bytes_count{ ::read( _awakening_pipe[0], buf, sizeof( buf ) ) };
       if( bytes_count )
       {
-        app_info << "Awakening event received\n";
+        std::cout << "Awakening event received\n";
       }
       return 2;
     }
   }
   /* there were no events nor any error, so it must have timed out. */
-  else if( ret == 0 )
-  {
-    return 0;
+  return ret; // 0 timeout, -1 error
+}
+
+
+std::shared_ptr<Connection> Server::accept()
+{
+  struct sockaddr_in addr_in{};
+  socklen_t addr_len { sizeof(addr_in) };
+
+  int conn_id;
+  if( (conn_id = ::accept(_socket, reinterpret_cast<sockaddr*>(&addr_in), &addr_len)) == -1)
+    throw ServerExeption( "Error accepting new connection");
+
+  std::string host{ inet_ntoa(addr_in.sin_addr) };
+  return std::make_shared<Connection>(conn_id, host);
+}
+
+
+std::shared_ptr<Connection> Server::wait_connection(int timeout_ms)
+{
+  int r{ poll(timeout_ms) }; 
+  if( r < 0)
+    throw ServerExeption( "Error polling");
+  
+    // 1 means a new connection was made. Other value could an awakeking event or timeout
+  if( r == 1 ) 
+    return { accept() };
+  
+  // awake event
+  if( r == 2 ) 
+      throw ServerExeption( "Awakened event");
+
+  throw TimeoutError( "Time-out");
+}
+
+
+void Server::run()
+{
+    std::cout << "Running server\n";
+    _running = true;
+
+    while( _running )
+    {
+        try
+        {
+            auto conn = wait_connection(1000);
+  
+            // enqueue connection for processing by a worker
+            {
+                std::lock_guard lock(_queue_mtx);
+                _queue.emplace_back(conn);
+            }
+            _queue_cv.notify_one();
+        }
+        catch(const TimeoutError& e)
+        {
+            continue;
+        }
+        catch(const ServerExeption& e)
+        {
+            // awakened or other poll error; if _running is false we should exit
+            if (!_running) 
+                break;
+            app_error << "Server::run poll error: " << e.what() << std::endl;
+        }
+    }
+
+    std::cout << "Server stopped...\n";
   }
 
-  return -1;
-}
 
 
-std::unique_ptr<Session> Server::accept(int timeout /*= 0*/)
-{
-  struct sockaddr_in addr_in;
-	socklen_t addr_len { sizeof(addr_in) };
-
-	int session_id;
-	if( (session_id = ::accept(m_socket, (struct sockaddr *)&addr_in, &addr_len)) == -1)
-	{
-	  throw new ServerExeption( "Error in accept");
-	}
-	
-	std::string host{ inet_ntoa(addr_in.sin_addr) };
-	return std::make_unique<Session>(session_id, host);
-}
 

@@ -7,13 +7,17 @@ namespace http
 {
     class Request : public Message
     {
-        private:
-            std::string m_method;
-            std::string m_target;
-        public:
-            Request(std::string method, std::string target, std::string http_version, std::string body);
-            ~Request();
-            std::string to_str();
-    };  
-}
+        std::string _method;
+        std::string _target;
 
+    public:
+        Request(std::string_view method,
+                std::string_view target,
+                std::string_view http_version,
+                std::string_view body);
+
+        ~Request() override;
+
+        std::string to_str() override;
+    };
+}

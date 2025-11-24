@@ -1,69 +1,87 @@
 #include "rest.h"
+
 #include <iostream>
 #include <sstream>
+
 #include "log_director.h"
 
 using namespace http::protocols;
 
-Rest::Rest()
+static std::string trim(const std::string& s)
 {
+    auto start = s.find_first_not_of(" \t\r\n");
+    auto end   = s.find_last_not_of(" \t\r\n");
+    if (start == std::string::npos) return "";
+    return s.substr(start, end - start + 1);
 }
 
-Rest::~Rest()
+http::Request Rest::parse_request(const std::string& raw)
 {
+    // Split headers vs. body
+    const std::string delim = "\r\n\r\n";
+    size_t pos = raw.find(delim);
+    if (pos == std::string::npos)
+        throw ProtocolException("Malformed HTTP: missing header/body separator");
+
+    std::string header_block = raw.substr(0, pos);
+    std::string body = raw.substr(pos + delim.size());
+
+    // Parse request line: METHOD TARGET VERSION
+    std::istringstream header_stream(header_block);
+    std::string request_line;
+    if (!std::getline(header_stream, request_line))
+        throw ProtocolException("Malformed HTTP: empty request line");
+
+    request_line = trim(request_line);
+
+    std::istringstream rl(request_line);
+    std::string method, target, version;
+
+    rl >> method >> target >> version;
+    if (method.empty() || target.empty() || version.empty())
+        throw ProtocolException("Malformed HTTP: invalid request line");
+
+    if (method != "POST" && method != "GET")
+        throw ProtocolException("Unsupported method: " + method);
+
+    // Parse Content-Length (optional for GET)
+    std::string header;
+    size_t content_length = 0;
+
+    while (std::getline(header_stream, header))
+    {
+        header = trim(header);
+
+        if (header.rfind("Content-Length:", 0) == 0)
+        {
+            std::string num = header.substr(strlen("Content-Length:"));
+            num = trim(num);
+            content_length = std::stoul(num);
+        }
+    }
+
+    if (method == "POST" && body.size() != content_length)
+        throw ProtocolException("Content-Length mismatch");
+
+    return http::Request(method, target, version, body);
 }
 
-http::Request Rest::serialize_request( std::string &str )
+http::Response Rest::handle(std::string in)
 {
-    std::string method, target, version, body;
-
-    std::stringstream ss{str};
-    ss >> method;
-    if(method != "POST" && method != "GET")
-    {
-        throw http::protocols::ProtocolException( "{Rest} HTT Request format error: the method '" + method + "' is not recognized");
-    }
-
-    ss >> target;
-    ss >> version;
-
-    std::string key{"Content-Length:"};
-    std::size_t found = str.find(key);
-    if ( found == std::string::npos )
-    {
-        throw http::protocols::ProtocolException( "{Rest} HTT Request format error: 'Content-Length' not found");
-    }
-
-    str = str.substr( found + key.size() );
-    found = str.find("{");
-    if ( found == std::string::npos )
-    {
-        throw http::protocols::ProtocolException( "{Rest} HTT Request format error: '{' not found");
-    }
-
-    body = str.substr( found );
-    
-    return http::Request{method, target, version, body};
-}
-
-
-http::Response Rest::handle( std::string in )
-{
-    app_debug << "Handling message with Rest\n";
+    app_debug << "Handling message with Rest" << std::endl;
 
     try
     {
-        Request req{ serialize_request(in) };
-        // TODO: handle request here
+        http::Request req = parse_request(in);
+        // TODO: dispatch your "routes" here
     }
-    catch(const std::exception& e)
+    catch (const std::exception& e)
     {
-        std::cerr << e.what() << '\n';
-        throw e;
+        app_error << e.what() << std::endl;
+        throw; // correct rethrow
     }
-    
-    Response r{ "HTTP/1.1", "{}" };
- 
-    app_debug << "Rest could handle the message\n";   
-    return r;
+
+    app_debug << "Rest handled the message OK" << std::endl;
+
+    return http::Response("HTTP/1.1", "{}");
 }

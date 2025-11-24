@@ -9,10 +9,10 @@ namespace app::log
     class CLogger : public Logger
     {
         public:
-            CLogger();
-            ~CLogger();
+            CLogger() = default;
+            ~CLogger() override = default;
 
-            void write(const std::string& message);
+            void write(const std::string& message) override;
     };
 }
 

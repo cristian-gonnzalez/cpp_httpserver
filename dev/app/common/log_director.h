@@ -1,135 +1,112 @@
 #pragma once
-
 #include "logger.h"
-#include <thread>
+
+#include <atomic>
+#include <chrono>
 #include <list>
-#include <string>
 #include <memory>
 #include <mutex>
 #include <source_location>
-#include <iostream>
 #include <sstream>
+#include <string>
+#include <vector>
 
-
-/**
- *  Useful macros
- */
-#define app_wrapper( level )  \
-    app::log::_##level << "[ " << #level << " ]" << std::source_location::current() 
-
-#define app_log    app_wrapper( normal ) 
-#define app_debug  app_wrapper( debug ) 
-#define app_info   app_wrapper( info ) 
-#define app_warn   app_wrapper( warn ) 
-#define app_error  app_wrapper( error ) 
-#define app_fatal  app_wrapper( fatal ) 
-
-
-namespace app::log 
+namespace app::log
 {
-    enum class LogLevel 
-    { 
-        normal, 
-        debug, 
-        info, 
-        warning, 
-        error, 
-        fatal
+    enum class LogLevel : int
+    {
+        normal = 0,
+        debug  = 1,
+        info   = 2,
+        warn   = 3,
+        error  = 4,
+        fatal  = 5
     };
 
-    class LogBuffer;
+    class LogBuffer
+    {
+        public:
+            // Construct a temporary LogBuffer for a given level.
+            explicit LogBuffer(LogLevel level);
+
+            // Movable (temporaries must be movable), non-copyable.
+            LogBuffer(LogBuffer&&) noexcept;
+            LogBuffer& operator=(LogBuffer&&) noexcept;
+            LogBuffer(const LogBuffer&) = delete;
+            LogBuffer& operator=(const LogBuffer&) = delete;
+
+            ~LogBuffer();
+
+            // Generic streaming
+            template<typename T>
+            LogBuffer& operator<<(const T& v)
+            {
+                std::ostringstream ss;
+                ss << v;
+                _buf << ss.str();
+                return *this;
+            }
+
+            // source_location specialization
+            LogBuffer& operator<<(const std::source_location& loc);
+
+            // C-string specialization (we append, but we do NOT auto-flush on embedded '\n')
+            LogBuffer& operator<<(const char* s)
+            {
+                _buf << s;
+                return *this;
+            }
+
+            // Manipulator (e.g. std::endl)
+            using Manip = std::basic_ostream<char, std::char_traits<char>>& (*)(std::basic_ostream<char, std::char_traits<char>>&);
+
+            LogBuffer& operator<<(Manip manip);
+
+            // Explicit flush
+            void flush();
+
+            LogLevel level() const noexcept { return _level; }
+
+        private:
+            void emit_to_director();
+
+            LogLevel                _level;
+            std::ostringstream      _buf{};
+            std::source_location    _location{ std::source_location::current() };
+            bool                    _flushed{ false };
+    };
 
     class LogDirector
     {
-        private:
-            /** Singlentons variables. */   
-            static std::mutex m_mutex;  
-            LogLevel m_level{LogLevel::normal};      
-            
-            std::list< std::shared_ptr<app::log::Logger> > m_loggers;
-            
-        protected:
-            /** Singlentons constructor should not be accesible. */
-            LogDirector();
-        
-        public:             
-            ~LogDirector();
-            /** Singletons should not have copy constructor. */
-            LogDirector(const LogDirector &other) = delete;
-            /** Singletons should not be assignable. */
-            void operator=(const LogDirector &) = delete;
-            /** Singlentons unique instance */
-            static LogDirector* get();
-        
-            void add(std::shared_ptr<app::log::Logger> logger);    
-
-            void set_level( const LogLevel level );
-            LogLevel get_level() const;
- 
-            void write(const LogBuffer& buf);
-    };   
-
-    /** LogBuffer stores the message until a 'std::endl' or '\n' is read. Then calls LogDirector 
-     *  to writes at the different loggers
-     */
-    class LogBuffer
-    {
-        private:
-            // Note:
-            //      This member variable is a pointer so we have a 'have a' relationship 
-            //      but in this case, it is an agregate (it is not a composition), this 
-            //      means the lifetime does not depend of this object.
-            LogDirector* m_director{nullptr};
-            LogLevel     m_level{LogLevel::normal};
-            std::string  m_buffer;
-
         public:
-            // Constructor
-            LogBuffer(LogLevel level, LogDirector* director);
-            // Copy constructor
-            LogBuffer(const LogBuffer& other);
-            // overload operator =
-            LogBuffer& operator=(const LogBuffer& other);
+            static LogDirector* get();
 
-            LogLevel get_level() const;
+            LogDirector(const LogDirector&) = delete;
+            LogDirector& operator=(const LogDirector&) = delete;
 
-            std::string to_string() const;
+            void add(std::shared_ptr<Logger> logger);
+            void set_level(LogLevel level) noexcept;
+            LogLevel get_level() const noexcept;
 
-            // formatted output
-            template<typename T> 
-            LogBuffer& operator<<(const T& value );
+            // Called by LogBuffer to write fully-formed string.
+            void write(LogLevel level, const std::string& message);
 
-            // Specialization of std::source_location for formatted output
-            LogBuffer& operator<<(const std::source_location& location);
+        private:
+            LogDirector() = default;
+            ~LogDirector() = default;
 
-            // Specialization of literal string for formatted output
-            LogBuffer& operator<<(const char* cstr);
- 
-            // This overload is used to implement output I/O manipulators such as std::endl
-            LogBuffer& operator<<(
-                       std::basic_ostream<char, std::char_traits<char>>& (*func) (std::basic_ostream<char, std::char_traits<char>>&) );
+            mutable std::mutex                     _mutex{};
+            LogLevel                               _level{ LogLevel::normal };
+            std::vector< std::shared_ptr<Logger> > _loggers{};
     };
 
-    // explicitly instantiate the template, and its member definitions 
-    // Otherwise, it will not generate the version we need when we call it from main
-    template<typename T> 
-    LogBuffer& LogBuffer::operator<<(const T& value )
-    {
-        std::stringstream ss;
-        ss << value;
+    // Keep macros working with temporary LogBuffer creation.
+    #define app_wrapper(level) (app::log::LogBuffer(app::log::LogLevel::level) << "[ " << #level << " ] " << std::source_location::current())
+    #define app_log    app_wrapper(normal)
+    #define app_debug  app_wrapper(debug)
+    #define app_info   app_wrapper(info)
+    #define app_warn   app_wrapper(warn)
+    #define app_error  app_wrapper(error)
+    #define app_fatal  app_wrapper(fatal)
 
-        m_buffer += ss.str();
-
-        return *this;
-    }   
-    
-    /**
-     * Global logger objects initializations
-     */
-    inline LogBuffer  _normal ( LogLevel::normal,  LogDirector::get() ); 
-    inline LogBuffer  _debug  ( LogLevel::debug,   LogDirector::get() ); 
-    inline LogBuffer  _info   ( LogLevel::info,    LogDirector::get() );
-    inline LogBuffer  _warning( LogLevel::warning, LogDirector::get() );
-    inline LogBuffer  _error  ( LogLevel::error,   LogDirector::get() ); 
-    inline LogBuffer  _fatal  ( LogLevel::fatal,   LogDirector::get() );
-}
+} // namespace app::log

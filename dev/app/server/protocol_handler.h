@@ -2,20 +2,18 @@
 
 #include <string>
 #include <vector>
+#include <memory>
 #include "protocol.h"
 #include "response.h"
 
 class ProtocolHandler
 {
     private:
-        std::vector<http::protocols::Protocol *> m_protocols;
+        std::vector< std::unique_ptr< http::protocols::Protocol > > _protocols{};
 
     public:
         ProtocolHandler();
-        ~ProtocolHandler();
+        ~ProtocolHandler() = default;
 
-        // TODO: change return type to http::response
         http::Response handle( std::string in );
 };
-
-

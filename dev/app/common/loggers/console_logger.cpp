@@ -3,13 +3,6 @@
 
 using namespace app::log;
 
-CLogger::CLogger()
-{
-}
-
-CLogger::~CLogger() 
-{
-}
 
 void CLogger::write(const std::string& message)
 {

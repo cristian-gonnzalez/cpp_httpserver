@@ -2,11 +2,8 @@
 
 using namespace http;
 
-Message::Message(std::string http_version, std::string body)
-: m_http_version{http_version}, m_body{body}
-{
-}
 
-Message::~Message()
+Message::Message(std::string_view http_version, std::string_view body)
+: _http_version(http_version), _body(body)
 {
 }
