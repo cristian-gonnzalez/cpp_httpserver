@@ -1,11 +1,10 @@
 # C++ HTTP Server (Modern C++20 Example)
 
-This repository contains a **minimal HTTP server written in C++**, designed as a
-**focused example to explore modern C++20 features and clean code structure**.
+This repository contains a **minimal HTTP server written in C++**, created as a
+focused example for exploring modern C++20 features and clean code structure.
 
-The project demonstrates how a small, self-contained codebase can be organized
-using modern C++ practices while implementing a simple HTTP / REST-style protocol
-from scratch.
+The project focuses on code organization, use of modern C++ practices, and the
+implementation of a simple HTTP / REST-style protocol built from scratch.
 
 The implementation is intentionally scoped and minimal, prioritizing
 **readability, structure, and design clarity** over full HTTP compliance or
