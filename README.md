@@ -1,46 +1,81 @@
-# HTTP server in modern c++
+# C++ HTTP Server (C++20 Learning Project)
 
-The idea of the project is to practice making an http server with the lastest c++ standards (c++ 20 or later).
+This repository contains a **simple HTTP server written in C++**, started as a
+**learning and experimentation project while studying modern C++20 features**.
 
-## Steps:
+The goal of the project was to practice:
+- Using modern C++ language features
+- Designing a small but structured codebase
+- Implementing a minimal HTTP server and REST-style protocol from scratch
 
-    1. Clone the repository
-    2. Run make
-      
-      ubuntu@Ubuntu:~/make$ make
-      g++ -c -std=c++2a -g -Wall -Weffc++  ../dev/app/*cpp ../dev/app/common/*cpp ../dev/app/common/loggers/*cpp ../dev/app/server/*cpp ../dev/app/http/*cpp ../dev/app/http/prot/*cpp  -I../dev/app -I../dev/app/common -I../dev/app/common/loggers -I../dev/app/server -I../dev/app/http -I../dev/app/http/prot -I../dev/app/server/cmds/
-      g++ *.o -o ../target/app -lpthread
+The implementation prioritizes clarity and learning over completeness,
+performance, or full HTTP compliance.
 
-    3. Run server
+---
 
-      ubuntu@Ubuntu:~/make$ ../target/app 
-        [ debug ] ../dev/app/server/server.cpp:39:5 [Server::Server(int, size_t)] [2025-11-24 20:41:14] (139942148851520): Calling Server
-        [ debug ] ../dev/app/server/server.cpp:222:5 [void Server::run()] [2025-11-24 20:41:14] (139942148847296): Running server
-        [ debug ] ../dev/app/server/server.cpp:191:45 [Server::start_tp(size_t)::<lambda()>] [2025-11-24 20:41:14] (139942140454592): tp - waiting ...
-        [ debug ] ../dev/app/server/server.cpp:191:45 [Server::start_tp(size_t)::<lambda()>] [2025-11-24 20:41:14] (139942132061888): tp - waiting ...
-        [ debug ] ../dev/app/server/server.cpp:191:45 [Server::start_tp(size_t)::<lambda()>] [2025-11-24 20:41:14] (139942123669184): tp - waiting ...
-        [ debug ] ../dev/app/server/server.cpp:191:45 [Server::start_tp(size_t)::<lambda()>] [2025-11-24 20:41:14] (139941912770240): tp - waiting ...
-        [ debug ] ../dev/app/server/server.cpp:191:45 [Server::start_tp(size_t)::<lambda()>] [2025-11-24 20:41:14] (139941904377536): tp - waiting ...
-        [ debug ] ../dev/app/server/server.cpp:191:45 [Server::start_tp(size_t)::<lambda()>] [2025-11-24 20:41:14] (139941895984832): tp - waiting ...
-        [ debug ] ../dev/app/server/server.cpp:191:45 [Server::start_tp(size_t)::<lambda()>] [2025-11-24 20:41:14] (139941887592128): tp - waiting ...
-        [ debug ] ../dev/app/server/server.cpp:191:45 [Server::start_tp(size_t)::<lambda()>] [2025-11-24 20:41:14] (139941879199424): tp - waiting ...
+## Features
 
-    4. Open a new terminal and run:
-      
-      ubuntu@Ubuntu:~/test$ python server_test.py 
-      hello client
-      hello client
+- Minimal HTTP server implementation
+- Simple REST-style protocol
+- Command-based request handling
+- Modular architecture (server, protocol, HTTP, logging)
+- Basic logging infrastructure
+- Example command (`add`)
+- Use of modern C++ (C++20) features where appropriate
 
-    5. Stop the server with CTRL+C
+---
 
-      ubuntu@Ubuntu:~/$ ../target/app 
-      ...
-        ^C[ debug ] ../dev/app/app.cpp:27:33 [main()::<lambda(const asio::error_code&, int)>] [2025-11-24 20:42:29] (139942148851520): Received signal: 2
-        [ debug ] ../dev/app/app.cpp:43:9 [int main()] [2025-11-24 20:42:29] (139942148851520): Stopping server...
-        [ debug ] ../dev/app/server/server.cpp:134:9 [int Server::poll(int)] [2025-11-24 20:42:29] (139942148847296): Awakening event received
-        [ debug ] ../dev/app/server/server.cpp:255:5 [void Server::run()] [2025-11-24 20:42:29] (139942148847296): Server stopped...
-        [ debug ] ../dev/app/app.cpp:45:9 [int main()] [2025-11-24 20:42:29] (139942148851520): Exit.
-        [ debug ] ../dev/app/server/server.cpp:60:3 [virtual Server::~Server()] [2025-11-24 20:42:29] (139942148851520): Calling ~Server
-    
+## REST Protocol
 
-      
+The server implements a **very small REST-style protocol**, designed purely for
+learning and experimentation.
+
+Current functionality includes:
+- Basic request parsing
+- Protocol dispatch
+- A simple `add` command
+
+The protocol is intentionally minimal and easy to extend.
+
+---
+
+## Building
+
+From the `make/` directory, run:
+
+```bash
+make
+```
+This compiles the server using C++20 and produces the binary at:
+
+```bash
+./target/app
+
+```
+
+You should see debug output indicating that the server and thread pool
+have started.
+
+## Running
+
+Start the server:
+```bash
+./target/app
+```
+You should see debug output indicating that the server and thread pool
+have started.
+
+
+## Testing
+
+Open a new terminal and run the provided test script:
+
+```bash
+cd test
+python server_test.py
+```
+
+Stop the server using CTRL+C.
+
+The server performs a clean shutdown and logs the shutdown sequence.
+
