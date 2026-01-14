@@ -12,7 +12,7 @@ production-level performance.
 
 ---
 
-## Goals
+### Goals
 
 - Apply modern C++ (C++20) language features in a concrete example
 - Design a small but well-structured native server
@@ -21,7 +21,7 @@ production-level performance.
 
 ---
 
-## REST Protocol
+### REST Protocol
 
 The server implements a **small REST-style protocol** intended as a
 demonstrative example.
@@ -35,7 +35,7 @@ The protocol is intentionally minimal and easy to extend.
 
 ---
 
-## Building
+#### Building
 
 From the `make/` directory, run:
 
@@ -52,7 +52,7 @@ This compiles the server using C++20 and produces the binary at:
 You should see debug output indicating that the server and thread pool
 have started.
 
-## Running
+#### Running
 
 Start the server:
 ```bash
@@ -62,13 +62,14 @@ You should see debug output indicating that the server and thread pool
 have started.
 
 
-## Testing
+#### Testing
 
 Open a new terminal and run the provided test script:
 
 ```bash
 cd test
 python server_test.py
+python rest_test.py
 ```
 
 Stop the server using CTRL+C.
