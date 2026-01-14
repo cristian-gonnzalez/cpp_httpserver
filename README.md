@@ -1,46 +1,77 @@
-# HTTP server in modern c++
+# C++ HTTP Server (Modern C++20 Example)
 
-The idea of the project is to practice making an http server with the lastest c++ standards (c++ 20 or later).
+This repository contains a **minimal HTTP server written in C++**, created as a
+focused example for exploring modern C++20 features and clean code structure.
 
-## Steps:
+The project focuses on code organization, use of modern C++ practices, and the
+implementation of a simple HTTP / REST-style protocol built from scratch.
 
-    1. Clone the repository
-    2. Run make
-      
-      ubuntu@Ubuntu:~/make$ make clean
-      rm -rf ../dev/app/*.o
-      ubuntu@Ubuntu:~/make$ make
-      g++ -std=c++2a -g ../dev/app/*.cpp -I../dev/app/*.h -o ../target/app -lpthread
-      chmod 755 ../target/app
+The implementation is intentionally scoped and minimal, prioritizing
+**readability, structure, and design clarity** over full HTTP compliance or
+production-level performance.
 
-    3. Run server
+---
 
-      ubuntu@Ubuntu:~/make$ ../target/app 
-      Running server
+## Goals
 
-    4. Open a new terminal and run:
-      
-      ubuntu@Ubuntu:~/test$ python server_test.py 
-      hello client
-      hello client
+- Apply modern C++ (C++20) language features in a concrete example
+- Design a small but well-structured native server
+- Implement a minimal HTTP and REST-style protocol
+- Keep the code easy to reason about and extend
 
-    5. Stop the server with CTRL+C
+---
 
-      ubuntu@Ubuntu:~/$ ../target/app 
-      Running server
-      worker 130139207763648
-      ...
-      worker 130139197277888
-      Hello server
-      130139197277888: waiting 5 sec
-      Calliing ~Session
-      130139086128832: sent message
-      Calliing ~Session
-      ^CSignal 2 recived
-      Stop server
-      Stopping server
-      Calling ~Server
+## REST Protocol
 
-    
+The server implements a **small REST-style protocol** intended as a
+demonstrative example.
 
-      
+Current functionality includes:
+- Basic request parsing
+- Protocol dispatch
+- A simple `add` command
+
+The protocol is intentionally minimal and easy to extend.
+
+---
+
+## Building
+
+From the `make/` directory, run:
+
+```bash
+make
+```
+This compiles the server using C++20 and produces the binary at:
+
+```bash
+./target/app
+
+```
+
+You should see debug output indicating that the server and thread pool
+have started.
+
+## Running
+
+Start the server:
+```bash
+./target/app
+```
+You should see debug output indicating that the server and thread pool
+have started.
+
+
+## Testing
+
+Open a new terminal and run the provided test script:
+
+```bash
+cd test
+python server_test.py
+```
+
+Stop the server using CTRL+C.
+
+The server performs a clean shutdown and logs the shutdown sequence.
+
