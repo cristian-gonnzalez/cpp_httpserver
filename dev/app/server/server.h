@@ -23,10 +23,16 @@ class Server
         Server(const Server& other) = delete;
         Server& operator=(const Server& other) = delete;
 
+        // TODO: define move semantics
+        Server(Server&& other) = delete;
+        Server& operator=(const Server&& other) = delete;
+
         void run();
         void stop();
 
     private:
+        // TODO: This is a handles, we use RAII and must define move semantics
+        //                  ^~~~~~~
         int                 _socket{-1};
         int                 _port{0};
         std::atomic<bool>   _running{false};
@@ -40,6 +46,8 @@ class Server
         // task queue + thread pool
         std::deque<std::shared_ptr<Connection>>   _queue{};
         
+        // TODO: move these to a struct/class since we cannot move a condition_variable or mutex
+        // Then define this as std::unique_ptr
         size_t                                    _worker_num{0};
         std::vector<std::thread>                  _workers{};
         std::mutex                                _queue_mtx{};

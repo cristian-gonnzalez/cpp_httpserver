@@ -20,15 +20,7 @@ Connection::Connection(int socket, std::string host)
 Connection::~Connection()
 {
   app_debug << "Calling ~Connection\n";
-
-  interrup();
-
-  if( _socket >= 0)
-    close(_socket);
-  if (_awakening_pipe[0] >= 0) 
-    close(_awakening_pipe[0]);
-  if (_awakening_pipe[1] >= 0) 
-    close(_awakening_pipe[1]);
+  close_handles();
 }
 
 Connection::Connection( Connection&& rvalue ) noexcept
@@ -44,19 +36,34 @@ Connection::Connection( Connection&& rvalue ) noexcept
 
 Connection& Connection::operator=( Connection&& rvalue ) noexcept
 {
-    if(this == &rvalue) 
-      return *this;
+    if(this != &rvalue)
+    {
+      close_handles();
 
-    _socket = rvalue._socket;
-    _host = std::move(rvalue._host);
-    _awakening_pipe[0] = rvalue._awakening_pipe[0];
-    _awakening_pipe[1] = rvalue._awakening_pipe[1];
+      _socket = rvalue._socket;
+      _host = std::move(rvalue._host);
+      _awakening_pipe[0] = rvalue._awakening_pipe[0];
+      _awakening_pipe[1] = rvalue._awakening_pipe[1];
 
-    rvalue._socket = -1;
-    rvalue._awakening_pipe[0] = -1;
-    rvalue._awakening_pipe[1] = -1;
-
+      rvalue._socket = -1;
+      rvalue._awakening_pipe[0] = -1;
+      rvalue._awakening_pipe[1] = -1;
+    }     
+    
     return *this;
+}
+
+void Connection::close_handles()
+{
+  interrup();
+
+  if( _socket >= 0)
+    close(_socket);
+  if (_awakening_pipe[0] >= 0) 
+    close(_awakening_pipe[0]);
+  if (_awakening_pipe[1] >= 0) 
+    close(_awakening_pipe[1]);
+
 }
 
 void Connection::interrup()

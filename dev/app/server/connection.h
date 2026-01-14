@@ -32,12 +32,14 @@ class Connection
     }
 
   private:
+    // This is a handles id, use RAII
     int           _socket{-1};
     std::string   _host;
 
     int           _awakening_pipe[2]{-1,-1};
     
-    int poll( short events, int msecs_timeout );
+    int  poll( short events, int msecs_timeout );
+    void close_handles();
   };
 
 

@@ -1,8 +1,10 @@
 #pragma once
 #include "command.h"
 
-
+#include <algorithm>
+#include <cctype>
 #include <sstream>
+#include <iostream>
 
 class CommandAdd : public Command
 {
@@ -13,8 +15,15 @@ class CommandAdd : public Command
         {
             // Pretend JSON format {"a":1,"b":2}
             int a = 0, b = 0;
-            sscanf(input.c_str(), "{\"a\":%d,\"b\":%d}", &a, &b);
 
+            std::string s{input};
+            s.erase( std::remove_if(s.begin(), s.end(),
+                                    [](unsigned char c) 
+                                    { 
+                                        return std::isspace(c); 
+                                    }),
+                      s.end() );
+            sscanf(s.c_str(), "{\"a\":%d,\"b\":%d}", &a, &b);            
             int result = a + b;
 
             std::ostringstream out;
